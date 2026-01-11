@@ -1,0 +1,16 @@
+<network>
+  <name>k8s</name>
+  <forward mode='nat'>
+    <nat>
+      <port start='1024' end='65535'/>
+    </nat>
+  </forward>
+  <bridge name='virbr1' stp='on' delay='0'/> <!-- NOTE: Update this if virbr1 is already in use -->
+  <domain name='k8s.local'/>
+  <dns enable='yes' />
+  <ip family='ipv4' address='192.168.128.1' prefix='24'>
+    <dhcp>
+      <range start='192.168.128.100' end='192.168.128.254'/>
+    </dhcp>
+  </ip>
+</network>

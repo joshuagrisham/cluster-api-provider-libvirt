@@ -1,0 +1,22 @@
+namespace: caplv-system
+namePrefix: caplv-
+
+labels:
+- includeSelectors: true
+  pairs:
+    cluster.x-k8s.io/provider: infrastructure-libvirt
+
+resources:
+- namespace.yaml
+- ../crd
+- ../rbac
+- ../manager
+- metrics_service.yaml
+
+patches:
+- path: manager_image_patch.yaml
+# [METRICS] The following patch will enable the metrics endpoint using HTTPS and the port :8443.
+# More info: https://book.kubebuilder.io/reference/metrics
+- path: manager_metrics_patch.yaml
+  target:
+    kind: Deployment

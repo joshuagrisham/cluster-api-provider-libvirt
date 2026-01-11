@@ -1,0 +1,46 @@
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: ${CLUSTER_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  clusterNetwork:
+    services:
+      cidrBlocks: ${SERVICE_CIDR:=["10.128.0.0/12"]}
+    pods:
+      cidrBlocks: ${POD_CIDR:=["192.168.0.0/16"]}
+    serviceDomain: ${SERVICE_DOMAIN:="cluster.local"}
+  controlPlaneEndpoint:
+    host: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_HOST}
+    port: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_PORT:=6443}
+  topology:
+    classRef:
+      name: libvirt-rke2
+    version: ${KUBERNETES_VERSION}
+    controlPlane:
+      replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
+    workers:
+      machineDeployments:
+      - class: worker-small
+        name: worker-small
+        replicas: ${WORKER_MACHINE_COUNT:=1}
+      - class: worker-medium
+        name: worker-medium
+        replicas: ${WORKER_MACHINE_COUNT:=1}
+    variables:
+    - name: network
+      value: ${LIBVIRT_MACHINE_NETWORK}
+    - name: storagePool
+      value: ${LIBVIRT_MACHINE_STORAGE_POOL}
+    - name: diskSize
+      value: ${LIBVIRT_MACHINE_DISK_SIZE:=20}
+    - name: backingImagePath
+      value: ${LIBVIRT_MACHINE_BACKING_IMAGE}
+    - name: sshUser
+      value: ${LIBVIRT_SSH_USER:=clusteradmin}
+    - name: sshPublicKey
+      value: ${LIBVIRT_SSH_PUBLIC_KEY}
+    - name: controlPlaneEndpointHost
+      value: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_HOST}
+    - name: controlPlaneEndpointPort
+      value: "${LIBVIRT_CONTROL_PLANE_ENDPOINT_PORT:=6443}"

@@ -1,0 +1,288 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: ${CLUSTER_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  clusterNetwork:
+    services:
+      cidrBlocks: ${SERVICE_CIDR:=["10.128.0.0/12"]}
+    pods:
+      cidrBlocks: ${POD_CIDR:=["192.168.0.0/16"]}
+    serviceDomain: ${SERVICE_DOMAIN:="cluster.local"}
+  controlPlaneEndpoint:
+    host: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_HOST}
+    port: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_PORT:=6443}
+  controlPlaneRef:
+    apiGroup: controlplane.cluster.x-k8s.io
+    kind: RKE2ControlPlane
+    name: ${CLUSTER_NAME}
+  infrastructureRef:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: LibvirtCluster
+    name: ${CLUSTER_NAME}
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtCluster
+metadata:
+  name: ${CLUSTER_NAME}
+  namespace: ${NAMESPACE}
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      network: "${LIBVIRT_MACHINE_NETWORK}"
+      storagePool: "${LIBVIRT_MACHINE_STORAGE_POOL}"
+      cpu: ${LIBVIRT_CONTROL_PLANE_CPU:=2}
+      memory: ${LIBVIRT_CONTROL_PLANE_MEMORY:=3072}
+      diskSize: ${LIBVIRT_CONTROL_PLANE_DISK_SIZE:=20}
+      backingImagePath: ${LIBVIRT_MACHINE_BACKING_IMAGE}
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-worker
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      network: "${LIBVIRT_MACHINE_NETWORK}"
+      storagePool: "${LIBVIRT_MACHINE_STORAGE_POOL}"
+      cpu: ${LIBVIRT_WORKER_CPU:=1}
+      memory: ${LIBVIRT_WORKER_MEMORY:=1536}
+      diskSize: ${LIBVIRT_WORKER_DISK_SIZE:=20}
+      backingImagePath: ${LIBVIRT_MACHINE_BACKING_IMAGE}
+
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: RKE2ControlPlane
+metadata:
+  name: ${CLUSTER_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  serverConfig:
+    cni: ${LIBVIRT_RKE2_CNI:=canal} # canal, flannel, calico
+    disableComponents:
+      kubernetesComponents:
+        - cloudController
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: LibvirtMachineTemplate
+      name: ${CLUSTER_NAME}-control-plane
+    nodeDrainTimeout: 2m
+    nodeDeletionTimeout: 30s
+    nodeVolumeDetachTimeout: 5m
+  rolloutStrategy:
+    type: "RollingUpdate"
+    rollingUpdate:
+      maxSurge: 1
+  version: "${KUBERNETES_VERSION}"
+  agentConfig:
+    kubelet:
+      extraArgs:
+      - "--provider-id=libvirt:///{{ local_hostname }}"
+    additionalUserData:
+      config: |
+        users:
+          - name: ${LIBVIRT_SSH_USER:=clusteradmin}
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            ssh-authorized-keys:
+              - '${LIBVIRT_SSH_PUBLIC_KEY}'
+            shell: /bin/bash
+  gzipUserData: false
+  registrationMethod: "control-plane-endpoint"
+
+  # Instead of a static pod, we can use a DaemonSet for kube-vip in k3s/RKE2
+  # But this requires that we set up some RBAC stuff first, then we can use our ServiceAccount in the DaemonSet's pods
+
+  files:
+
+    - path: "/var/lib/rancher/rke2/server/manifests/kube-vip.yaml"
+      owner: "root:root"
+      permissions: "0640"
+      content: |
+        ---
+        # RBAC Source: https://kube-vip.io/manifests/rbac.yaml
+        ---
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: kube-vip
+          namespace: kube-system
+        ---
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          annotations:
+            rbac.authorization.kubernetes.io/autoupdate: "true"
+          name: system:kube-vip-role
+        rules:
+          - apiGroups: [""]
+            resources: ["services/status"]
+            verbs: ["update"]
+          - apiGroups: [""]
+            resources: ["services", "endpoints"]
+            verbs: ["list","get","watch", "update"]
+          - apiGroups: [""]
+            resources: ["nodes"]
+            verbs: ["list","get","watch", "update", "patch"]
+          - apiGroups: ["coordination.k8s.io"]
+            resources: ["leases"]
+            verbs: ["list", "get", "watch", "update", "create"]
+          - apiGroups: ["discovery.k8s.io"]
+            resources: ["endpointslices"]
+            verbs: ["list","get","watch", "update"]
+          - apiGroups: [""]
+            resources: ["pods"]
+            verbs: ["list"]
+
+        ---
+        kind: ClusterRoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: system:kube-vip-binding
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: system:kube-vip-role
+        subjects:
+        - kind: ServiceAccount
+          name: kube-vip
+          namespace: kube-system
+
+        ---
+        # DaemonSet Source: https://kube-vip.io/docs/installation/daemonset/#arp-example-for-daemonset
+        apiVersion: apps/v1
+        kind: DaemonSet
+        metadata:
+          name: kube-vip
+          namespace: kube-system
+        spec:
+          selector:
+            matchLabels:
+              name: kube-vip
+          template:
+            metadata:
+              labels:
+                name: kube-vip
+            spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: node-role.kubernetes.io/master
+                        operator: Exists
+                    - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
+              containers:
+              - args:
+                - manager
+                env:
+                - name: address
+                  value: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_HOST}
+                - name: vip_arp
+                  value: "true"
+                - name: port
+                  value: "${LIBVIRT_CONTROL_PLANE_ENDPOINT_PORT:=6443}"
+                # - name: vip_interface # allow kube-vip to auto-detect the interface
+                #   value: ens160
+                - name: vip_subnet
+                  value: "32"
+                - name: cp_enable
+                  value: "true"
+                - name: cp_namespace
+                  value: kube-system
+                - name: vip_ddns
+                  value: "false"
+                - name: svc_enable
+                  value: "true"
+                - name: vip_leaderelection
+                  value: "true"
+                - name: vip_leaseduration
+                  value: "5"
+                - name: vip_renewdeadline
+                  value: "3"
+                - name: vip_retryperiod
+                  value: "1"
+                image: ghcr.io/kube-vip/kube-vip:v1.0.3
+                imagePullPolicy: IfNotPresent
+                name: kube-vip
+                resources: {}
+                securityContext:
+                  capabilities:
+                    add:
+                    - NET_ADMIN
+                    - NET_RAW
+                    - SYS_TIME
+              hostNetwork: true
+              serviceAccountName: kube-vip
+              tolerations:
+              - effect: NoSchedule
+                operator: Exists
+              - effect: NoExecute
+                operator: Exists
+
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: MachineDeployment
+metadata:
+  name: ${CLUSTER_NAME}-worker
+  namespace: ${NAMESPACE}
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${WORKER_MACHINE_COUNT:=1}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+    spec:
+      version: "${KUBERNETES_VERSION}"
+      clusterName: ${CLUSTER_NAME}
+      bootstrap:
+        configRef:
+          apiGroup: bootstrap.cluster.x-k8s.io
+          kind: RKE2ConfigTemplate
+          name: ${CLUSTER_NAME}-worker
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: LibvirtMachineTemplate
+        name: ${CLUSTER_NAME}-worker
+
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: RKE2ConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-worker
+  namespace: ${NAMESPACE}
+spec: 
+  template:
+    spec:
+      gzipUserData: false
+      agentConfig:
+        kubelet:
+          extraArgs:
+          - "--provider-id=libvirt:///{{ local_hostname }}"
+        additionalUserData:
+          config: |
+            users:
+              - name: ${LIBVIRT_SSH_USER:=clusteradmin}
+                sudo: ALL=(ALL) NOPASSWD:ALL
+                ssh-authorized-keys:
+                  - '${LIBVIRT_SSH_PUBLIC_KEY}'
+                shell: /bin/bash

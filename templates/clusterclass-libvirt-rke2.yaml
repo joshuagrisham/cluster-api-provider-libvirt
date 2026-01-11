@@ -1,0 +1,443 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: ClusterClass
+metadata:
+  name: libvirt-rke2
+spec:
+  infrastructure:
+    templateRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: LibvirtClusterTemplate
+      name: libvirt-rke2
+  controlPlane:
+    templateRef:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: RKE2ControlPlaneTemplate
+      name: libvirt-rke2
+    machineInfrastructure:
+      templateRef:
+        kind: LibvirtMachineTemplate
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        name: libvirt-rke2-control-plane
+    healthCheck:
+      checks:
+        unhealthyNodeConditions:
+        - type: Ready
+          status: Unknown
+          timeoutSeconds: 300
+        - type: Ready
+          status: "False"
+          timeoutSeconds: 300
+        unhealthyMachineConditions:
+        - type: "NodeReady"
+          status: Unknown
+          timeoutSeconds: 300
+        - type: "NodeReady"
+          status: "False"
+          timeoutSeconds: 300
+  workers:
+    machineDeployments:
+    - class: worker-small
+      bootstrap:
+        templateRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: RKE2ConfigTemplate
+          name: libvirt-rke2-worker
+      infrastructure:
+        templateRef:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+          kind: LibvirtMachineTemplate
+          name: libvirt-rke2-worker-small
+      healthCheck:
+        checks:
+          unhealthyNodeConditions:
+          - type: Ready
+            status: Unknown
+            timeoutSeconds: 300
+          - type: Ready
+            status: "False"
+            timeoutSeconds: 300
+          unhealthyMachineConditions:
+          - type: "NodeReady"
+            status: Unknown
+            timeoutSeconds: 300
+          - type: "NodeReady"
+            status: "False"
+            timeoutSeconds: 300
+    - class: worker-medium
+      bootstrap:
+        templateRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: RKE2ConfigTemplate
+          name: libvirt-rke2-worker
+      infrastructure:
+        templateRef:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+          kind: LibvirtMachineTemplate
+          name: libvirt-rke2-worker-medium
+      healthCheck:
+        checks:
+          unhealthyNodeConditions:
+          - type: Ready
+            status: Unknown
+            timeoutSeconds: 300
+          - type: Ready
+            status: "False"
+            timeoutSeconds: 300
+          unhealthyMachineConditions:
+          - type: "NodeReady"
+            status: Unknown
+            timeoutSeconds: 300
+          - type: "NodeReady"
+            status: "False"
+            timeoutSeconds: 300
+  variables:
+  - name: network
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "network sets the libvirt network to attach the VM to"
+  - name: storagePool
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "storagePool sets the libvirt storage pool for the VM disk"
+  - name: diskSize
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: integer
+        description: "diskSize sets the size of the disk for the VM"
+  - name: backingImagePath
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "backingImagePath sets the path to the backing image for the VM disk"
+  - name: sshPublicKey
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "sshPublicKey sets the SSH public key for access to log in to the VM"
+  - name: sshUser
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        default: "clusteradmin"
+        description: "sshUser sets the SSH user for access to log in to the VM"
+  - name: controlPlaneEndpointHost
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "controlPlaneEndpointHost sets the control plane endpoint host for the cluster (to be advertised by kube-vip)"
+  - name: controlPlaneEndpointPort
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        default: "6443"
+        description: "controlPlaneEndpointPort sets the control plane endpoint port for the cluster (to be advertised by kube-vip)"
+  patches:
+  - name: LibvirtMachineTemplateGeneral
+    definitions:
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: LibvirtMachineTemplate
+        # Match all LibvirtMachineTemplates (control plane and all worker classes)
+        matchResources:
+          controlPlane: true
+          machineDeploymentClass:
+            names:
+            - "*"
+      jsonPatches:
+      - op: replace
+        path: "/spec/template/spec/network"
+        valueFrom:
+          variable: network
+      - op: replace
+        path: "/spec/template/spec/storagePool"
+        valueFrom:
+          variable: storagePool
+      - op: replace
+        path: "/spec/template/spec/diskSize"
+        valueFrom:
+          variable: diskSize
+      - op: replace
+        path: "/spec/template/spec/backingImagePath"
+        valueFrom:
+          variable: backingImagePath
+  - name: RKE2ControlPlaneTemplateGeneral
+    definitions:
+    - selector:
+        apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+        kind: RKE2ControlPlaneTemplate
+        matchResources:
+          controlPlane: true
+      jsonPatches:
+      - op: add
+        path: "/spec/template/spec/agentConfig/additionalUserData"
+        valueFrom:
+          template: |
+            config: |
+              users:
+                - name: {{ .sshUser }}
+                  sudo: ALL=(ALL) NOPASSWD:ALL
+                  ssh-authorized-keys:
+                    - '{{ .sshPublicKey }}'
+                  shell: /bin/bash
+
+      - op: add
+        path: "/spec/template/spec/files/-"
+        valueFrom:
+          template: |
+            path: "/var/lib/rancher/rke2/server/manifests/kube-vip-daemonset.yaml"
+            owner: "root:root"
+            permissions: "0640"
+            content: |
+              ---
+              # DaemonSet Source: https://kube-vip.io/docs/installation/daemonset/#arp-example-for-daemonset
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: kube-vip
+                namespace: kube-system
+              spec:
+                selector:
+                  matchLabels:
+                    name: kube-vip
+                template:
+                  metadata:
+                    labels:
+                      name: kube-vip
+                  spec:
+                    affinity:
+                      nodeAffinity:
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          nodeSelectorTerms:
+                          - matchExpressions:
+                            - key: node-role.kubernetes.io/master
+                              operator: Exists
+                          - matchExpressions:
+                            - key: node-role.kubernetes.io/control-plane
+                              operator: Exists
+                    containers:
+                    - args:
+                      - manager
+                      env:
+                      - name: address
+                        value: {{ .controlPlaneEndpointHost }}
+                      - name: vip_arp
+                        value: "true"
+                      - name: port
+                        value: "{{ .controlPlaneEndpointPort }}"
+                      # - name: vip_interface # allow kube-vip to auto-detect the interface
+                      #   value: ens160
+                      - name: vip_subnet
+                        value: "32"
+                      - name: cp_enable
+                        value: "true"
+                      - name: cp_namespace
+                        value: kube-system
+                      - name: vip_ddns
+                        value: "false"
+                      - name: svc_enable
+                        value: "true"
+                      - name: vip_leaderelection
+                        value: "true"
+                      - name: vip_leaseduration
+                        value: "5"
+                      - name: vip_renewdeadline
+                        value: "3"
+                      - name: vip_retryperiod
+                        value: "1"
+                      image: ghcr.io/kube-vip/kube-vip:v1.0.3
+                      imagePullPolicy: IfNotPresent
+                      name: kube-vip
+                      resources: {}
+                      securityContext:
+                        capabilities:
+                          add:
+                          - NET_ADMIN
+                          - NET_RAW
+                          - SYS_TIME
+                    hostNetwork: true
+                    serviceAccountName: kube-vip
+                    tolerations:
+                    - effect: NoSchedule
+                      operator: Exists
+                    - effect: NoExecute
+                      operator: Exists
+
+  - name: RKE2ConfigTemplateGeneral
+    definitions:
+    - selector:
+        apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+        kind: RKE2ConfigTemplate
+        matchResources:
+          machineDeploymentClass:
+            names:
+            - "*"
+      jsonPatches:
+      - op: add
+        path: "/spec/template/spec/agentConfig/additionalUserData"
+        valueFrom:
+          template: |
+            config: |
+              users:
+                - name: {{ .sshUser }}
+                  sudo: ALL=(ALL) NOPASSWD:ALL
+                  ssh-authorized-keys:
+                    - '{{ .sshPublicKey }}'
+                  shell: /bin/bash
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtClusterTemplate
+metadata:
+  name: libvirt-rke2
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtMachineTemplate
+metadata:
+  name: libvirt-rke2-control-plane
+spec:
+  template:
+    spec:
+      network: ""
+      storagePool: ""
+      cpu: 2
+      memory: 3072
+      diskSize: 0
+      backingImagePath: ""
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtMachineTemplate
+metadata:
+  name: libvirt-rke2-worker-small
+spec:
+  template:
+    spec:
+      network: ""
+      storagePool: ""
+      cpu: 1
+      memory: 1024
+      diskSize: 0
+      backingImagePath: ""
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtMachineTemplate
+metadata:
+  name: libvirt-rke2-worker-medium
+spec:
+  template:
+    spec:
+      network: ""
+      storagePool: ""
+      cpu: 1
+      memory: 1536
+      diskSize: 0
+      backingImagePath: ""
+
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: RKE2ControlPlaneTemplate
+metadata:
+  name: libvirt-rke2
+spec:
+  template:
+    spec:
+      serverConfig:
+        cni: canal # canal, flannel, calico ?
+        disableComponents:
+          kubernetesComponents:
+            - cloudController
+      rolloutStrategy:
+        type: "RollingUpdate"
+        rollingUpdate:
+          maxSurge: 1
+      agentConfig:
+        kubelet:
+          extraArgs:
+          - "--provider-id=libvirt:///{{ local_hostname }}"
+      gzipUserData: false
+      registrationMethod: "control-plane-endpoint"
+
+      # Instead of a static pod, we can use a DaemonSet for kube-vip in k3s/RKE2
+      # But this requires that we set up some RBAC stuff first, then we can use our ServiceAccount in the DaemonSet's pods
+
+      files:
+
+        - path: "/var/lib/rancher/rke2/server/manifests/kube-vip-rbac.yaml"
+          owner: "root:root"
+          permissions: "0640"
+          content: |
+            ---
+            # RBAC Source: https://kube-vip.io/manifests/rbac.yaml
+            ---
+            apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: kube-vip
+              namespace: kube-system
+            ---
+            apiVersion: rbac.authorization.k8s.io/v1
+            kind: ClusterRole
+            metadata:
+              annotations:
+                rbac.authorization.kubernetes.io/autoupdate: "true"
+              name: system:kube-vip-role
+            rules:
+              - apiGroups: [""]
+                resources: ["services/status"]
+                verbs: ["update"]
+              - apiGroups: [""]
+                resources: ["services", "endpoints"]
+                verbs: ["list","get","watch", "update"]
+              - apiGroups: [""]
+                resources: ["nodes"]
+                verbs: ["list","get","watch", "update", "patch"]
+              - apiGroups: ["coordination.k8s.io"]
+                resources: ["leases"]
+                verbs: ["list", "get", "watch", "update", "create"]
+              - apiGroups: ["discovery.k8s.io"]
+                resources: ["endpointslices"]
+                verbs: ["list","get","watch", "update"]
+              - apiGroups: [""]
+                resources: ["pods"]
+                verbs: ["list"]
+
+            ---
+            kind: ClusterRoleBinding
+            apiVersion: rbac.authorization.k8s.io/v1
+            metadata:
+              name: system:kube-vip-binding
+            roleRef:
+              apiGroup: rbac.authorization.k8s.io
+              kind: ClusterRole
+              name: system:kube-vip-role
+            subjects:
+            - kind: ServiceAccount
+              name: kube-vip
+              namespace: kube-system
+
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: RKE2ConfigTemplate
+metadata:
+  name: libvirt-rke2-worker
+spec: 
+  template:
+    spec:
+      gzipUserData: false
+      agentConfig:
+        kubelet:
+          extraArgs:
+          - "--provider-id=libvirt:///{{ local_hostname }}"

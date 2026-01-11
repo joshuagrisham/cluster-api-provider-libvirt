@@ -1,0 +1,438 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: ClusterClass
+metadata:
+  name: libvirt-kubeadm
+spec:
+  infrastructure:
+    templateRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: LibvirtClusterTemplate
+      name: libvirt-kubeadm
+  controlPlane:
+    templateRef:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+      kind: KubeadmControlPlaneTemplate
+      name: libvirt-kubeadm
+    machineInfrastructure:
+      templateRef:
+        kind: LibvirtMachineTemplate
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        name: libvirt-kubeadm-control-plane
+    healthCheck:
+      checks:
+        unhealthyNodeConditions:
+        - type: Ready
+          status: Unknown
+          timeoutSeconds: 300
+        - type: Ready
+          status: "False"
+          timeoutSeconds: 300
+        unhealthyMachineConditions:
+        - type: "NodeReady"
+          status: Unknown
+          timeoutSeconds: 300
+        - type: "NodeReady"
+          status: "False"
+          timeoutSeconds: 300
+  workers:
+    machineDeployments:
+    - class: worker-small
+      bootstrap:
+        templateRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+          kind: KubeadmConfigTemplate
+          name: libvirt-kubeadm-worker
+      infrastructure:
+        templateRef:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+          kind: LibvirtMachineTemplate
+          name: libvirt-kubeadm-worker-small
+      healthCheck:
+        checks:
+          unhealthyNodeConditions:
+          - type: Ready
+            status: Unknown
+            timeoutSeconds: 300
+          - type: Ready
+            status: "False"
+            timeoutSeconds: 300
+          unhealthyMachineConditions:
+          - type: "NodeReady"
+            status: Unknown
+            timeoutSeconds: 300
+          - type: "NodeReady"
+            status: "False"
+            timeoutSeconds: 300
+    - class: worker-medium
+      bootstrap:
+        templateRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+          kind: KubeadmConfigTemplate
+          name: libvirt-kubeadm-worker
+      infrastructure:
+        templateRef:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+          kind: LibvirtMachineTemplate
+          name: libvirt-kubeadm-worker-medium
+      healthCheck:
+        checks:
+          unhealthyNodeConditions:
+          - type: Ready
+            status: Unknown
+            timeoutSeconds: 300
+          - type: Ready
+            status: "False"
+            timeoutSeconds: 300
+          unhealthyMachineConditions:
+          - type: "NodeReady"
+            status: Unknown
+            timeoutSeconds: 300
+          - type: "NodeReady"
+            status: "False"
+            timeoutSeconds: 300
+  variables:
+  - name: network
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "network sets the libvirt network to attach the VM to"
+  - name: storagePool
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "storagePool sets the libvirt storage pool for the VM disk"
+  - name: diskSize
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: integer
+        description: "diskSize sets the size of the disk for the VM"
+  - name: backingImagePath
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "backingImagePath sets the path to the backing image for the VM disk"
+  - name: sshPublicKey
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "sshPublicKey sets the SSH public key for access to log in to the VM"
+  - name: sshUser
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        default: "clusteradmin"
+        description: "sshUser sets the SSH user for access to log in to the VM"
+  - name: controlPlaneEndpointHost
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "controlPlaneEndpointHost sets the control plane endpoint host for the cluster (to be advertised by kube-vip)"
+  - name: controlPlaneEndpointPort
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        default: "6443"
+        description: "controlPlaneEndpointPort sets the control plane endpoint port for the cluster (to be advertised by kube-vip)"
+  patches:
+  - name: LibvirtMachineTemplateGeneral
+    definitions:
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: LibvirtMachineTemplate
+        # Match all LibvirtMachineTemplates (control plane and all worker classes)
+        matchResources:
+          controlPlane: true
+          machineDeploymentClass:
+            names:
+            - "*"
+      jsonPatches:
+      - op: replace
+        path: "/spec/template/spec/network"
+        valueFrom:
+          variable: network
+      - op: replace
+        path: "/spec/template/spec/storagePool"
+        valueFrom:
+          variable: storagePool
+      - op: replace
+        path: "/spec/template/spec/diskSize"
+        valueFrom:
+          variable: diskSize
+      - op: replace
+        path: "/spec/template/spec/backingImagePath"
+        valueFrom:
+          variable: backingImagePath
+  - name: KubeadmControlPlaneTemplateGeneral
+    definitions:
+    - selector:
+        apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+        kind: KubeadmControlPlaneTemplate
+        matchResources:
+          controlPlane: true
+      jsonPatches:
+      - op: add
+        path: "/spec/template/spec/kubeadmConfigSpec/users"
+        valueFrom:
+          template: |
+            - name: {{ .sshUser }}
+              sshAuthorizedKeys:
+              - '{{ .sshPublicKey }}'
+              sudo: ALL=(ALL) NOPASSWD:ALL
+              shell: /bin/bash
+
+      - op: add
+        path: "/spec/template/spec/kubeadmConfigSpec/files/-"
+        valueFrom:
+          template: |
+            content: |
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: kube-vip
+                namespace: kube-system
+              spec:
+                containers:
+                - args:
+                  - manager
+                  env:
+                  - name: address
+                    value: {{ .controlPlaneEndpointHost }}
+                  - name: vip_arp
+                    value: "true"
+                  - name: port
+                    value: "{{ .controlPlaneEndpointPort }}"
+                  # - name: vip_interface
+                  #   value: ens192 # allow kube-vip to auto-detect the interface
+                  - name: vip_subnet
+                    value: "32"
+                  - name: cp_enable
+                    value: "true"
+                  - name: cp_namespace
+                    value: kube-system
+                  - name: vip_ddns
+                    value: "false"
+                  - name: svc_enable
+                    value: "true"
+                  - name: vip_leaderelection
+                    value: "true"
+                  - name: vip_leaseduration
+                    value: "5"
+                  - name: vip_renewdeadline
+                    value: "3"
+                  - name: vip_retryperiod
+                    value: "1"
+                  image: ghcr.io/kube-vip/kube-vip:v1.0.3
+                  imagePullPolicy: IfNotPresent
+                  name: kube-vip
+                  resources: {}
+                  securityContext:
+                    capabilities:
+                      add:
+                      - NET_ADMIN
+                      - NET_RAW
+                      - SYS_TIME
+                  volumeMounts:
+                  - mountPath: /etc/kubernetes/admin.conf
+                    name: kubeconfig
+                    readOnly: true
+                  - mountPath: /etc/kubernetes/pki
+                    name: pki
+                    readOnly: true
+                hostAliases:
+                - hostnames:
+                  - kubernetes
+                  ip: 127.0.0.1
+                hostNetwork: true
+                volumes:
+                - hostPath:
+                    path: /etc/kubernetes/kube-vip.conf
+                    type: File
+                  name: kubeconfig
+                - hostPath:
+                    path: /etc/kubernetes/pki
+                    type: Directory
+                  name: pki
+                tolerations:
+                - effect: NoExecute
+                  operator: Exists
+                - effect: NoSchedule
+                  operator: Exists
+            owner: root:root
+            path: /etc/kubernetes/manifests/kube-vip.yaml
+            permissions: "0644"
+
+  - name: KubeadmConfigTemplateGeneral
+    definitions:
+    - selector:
+        apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+        kind: KubeadmConfigTemplate
+        matchResources:
+          machineDeploymentClass:
+            names:
+            - "*"
+      jsonPatches:
+      - op: add
+        path: "/spec/template/spec/users"
+        valueFrom:
+          template: |
+            - name: clusteradmin
+              sshAuthorizedKeys:
+              - '{{ .sshPublicKey }}'
+              sudo: ALL=(ALL) NOPASSWD:ALL
+              shell: /bin/bash
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtClusterTemplate
+metadata:
+  name: libvirt-kubeadm
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtMachineTemplate
+metadata:
+  name: libvirt-kubeadm-control-plane
+spec:
+  template:
+    spec:
+      network: ""
+      storagePool: ""
+      cpu: 2
+      memory: 3072
+      diskSize: 0
+      backingImagePath: ""
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtMachineTemplate
+metadata:
+  name: libvirt-kubeadm-worker-small
+spec:
+  template:
+    spec:
+      network: ""
+      storagePool: ""
+      cpu: 1
+      memory: 1024
+      diskSize: 0
+      backingImagePath: ""
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: LibvirtMachineTemplate
+metadata:
+  name: libvirt-kubeadm-worker-medium
+spec:
+  template:
+    spec:
+      network: ""
+      storagePool: ""
+      cpu: 1
+      memory: 1536
+      diskSize: 0
+      backingImagePath: ""
+
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+kind: KubeadmControlPlaneTemplate
+metadata:
+  name: libvirt-kubeadm
+spec:
+  template:
+    spec:
+      kubeadmConfigSpec:
+        format: cloud-config
+        clusterConfiguration:
+          apiServer:
+            certSANs:
+            - "127.0.0.1"
+            - "localhost"
+        initConfiguration:
+          nodeRegistration:
+            kubeletExtraArgs:
+            - name: provider-id
+              value: libvirt:///{{ local_hostname }}
+            name: '{{ local_hostname }}'
+        joinConfiguration:
+          nodeRegistration:
+            kubeletExtraArgs:
+            - name: provider-id
+              value: libvirt:///{{ local_hostname }}
+            name: '{{ local_hostname }}'
+        files:
+
+        - content: 127.0.0.1 localhost kubernetes
+          owner: root:root
+          path: /etc/kube-vip.hosts
+          permissions: "0644"
+
+        # Create a temporary kubeconfig for kube-vip; it will be updated during kubeadm init
+        - content: |
+            apiVersion: v1
+            kind: Config
+            clusters:
+            - name: local
+              cluster:
+                server: https://127.0.0.1:6443
+                # insecure-skip-tls-verify: true
+            users:
+            - name: placeholder
+              user: {}
+            contexts:
+            - name: default
+              context:
+                cluster: local
+                user: placeholder
+            current-context: default
+          owner: root:root
+          path: /etc/kubernetes/kube-vip.conf
+          permissions: "0644"
+
+        preKubeadmCommands:
+        - echo "::1         ipv6-localhost ipv6-loopback localhost6 localhost6.localdomain6" >>/etc/hosts
+        - echo "127.0.0.1   {{ local_hostname }} localhost localhost.localdomain localhost4 localhost4.localdomain4" >>/etc/hosts
+        # Start a background process to update kube-vip.conf once admin.conf exists
+        # This allows kube-vip to get proper credentials DURING kubeadm init
+        - |
+          (
+            while [ ! -f /etc/kubernetes/admin.conf ]; do
+              sleep 2
+            done
+            KUBECONFIG_ADMIN=/etc/kubernetes/admin.conf
+            # If super-admin.conf exists, use that instead
+            if [ -f /etc/kubernetes/super-admin.conf ]; then
+              KUBECONFIG_ADMIN=/etc/kubernetes/super-admin.conf
+            fi
+            sed 's|server:.*|server: https://127.0.0.1:6443|' $KUBECONFIG_ADMIN > /etc/kubernetes/kube-vip.conf
+            chmod 644 /etc/kubernetes/kube-vip.conf
+          ) &
+
+        postKubeadmCommands:
+        # Install CNI
+        - KUBECONFIG=/etc/kubernetes/super-admin.conf kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+kind: KubeadmConfigTemplate
+metadata:
+  name: libvirt-kubeadm-worker
+spec:
+  template:
+    spec:
+      format: cloud-config
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+          - name: provider-id
+            value: libvirt:///{{ local_hostname }}
+          - name: "eviction-hard"
+            value: "nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%"

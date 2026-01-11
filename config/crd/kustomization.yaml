@@ -1,0 +1,17 @@
+# This kustomization.yaml is not intended to be run by itself,
+# since it depends on service name and namespace that are out of this kustomize package.
+# It should be run by config/default
+resources:
+- bases/infrastructure.cluster.x-k8s.io_libvirtclusters.yaml
+- bases/infrastructure.cluster.x-k8s.io_libvirtclustertemplates.yaml
+- bases/infrastructure.cluster.x-k8s.io_libvirtmachines.yaml
+- bases/infrastructure.cluster.x-k8s.io_libvirtmachinetemplates.yaml
+# +kubebuilder:scaffold:crdkustomizeresource
+
+patches: []
+
+labels:
+- includeSelectors: true
+  pairs:
+    cluster.x-k8s.io/v1beta1: v1beta1 # RKE2 requires that resources have v1beta1 (v0.21.1 releaed Nov 4, 2025)
+    cluster.x-k8s.io/v1beta2: v1beta2
