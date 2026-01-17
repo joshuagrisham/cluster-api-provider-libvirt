@@ -24,7 +24,7 @@ func main() {
 		BackingImagePath: "/k8s/noble-server-cloudimg-amd64.img",
 		UserData: `#cloud-config
 users:
-  - name: ubuntu
+  - name: clusteradmin
     ssh-authorized-keys:
       - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCbQPpQrvr9OsdfI/+UA9j3xJa8KTPs2qvawuAFtyS4gGsXpyLov5Ilhe5m9b07/aSFhjdCBGPlzqBmuO603h+C+/tszOMUzQWQdDsjEsiIO6M//n9JYboK6PqignkrncwjC1P3h5wzj/3XFsR/93OBWu49tP5k52lt8bsHr12atpHxjQDql4CyKb7ACPxbqIc4ee+hlvW/mrqRO+Q5kZxAPfIpc1yFeLhlATIVpRX5mH9oRYG1N8C7u2/rtJAJTjevxqMgmGxpqFqeUUcaytVFOCpGy0Rg4+h3qurlYxIVPc6MInOZCy0/40JWS0xwqMVqYKUnULGfYh4KHeItv/9OqtBoOORrDywUd0r0XW5YB2nqb57JiHJSiqnC0RH+/3O6ITFCx/4LItWr8G1ogI9kOD9/3H4wO1g8WRjWxnPzVMk2sXm5eSDZfhmoDqhQv+d/WEEWRLTmXnbp5LCQZDtC2M0b8wGohVnc+xIif6qJlo5r1rVpkDeuCJzgqh2ECOS4fe5Se/AhI63+GbVFdcmLL6LLszUC9egGrLTIzOJNgd0foyt22CeXRomwoMiTjkKr1Ih5Aet+POkKcdMCZEtwGWdoPp/n+TAI7ba/r5+17I0EOkdnBnhmxxGZL4EBOK4rjg0FfD2McVeaXPm4oOGKM2WS0AnY//1KDCRXAiAfyQ== joshua@thinkpad
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
@@ -33,7 +33,7 @@ users:
 chpasswd:
   expire: false
   list:
-  - ubuntu:password1
+  - clusteradmin:password1
 
 ssh_pwauth: true
 

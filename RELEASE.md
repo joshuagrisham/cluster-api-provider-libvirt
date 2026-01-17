@@ -3,12 +3,12 @@
 Currently the release process is manual. A workflow could be set up in the future. The steps below are documented just to help facilitate the manual process.
 
 ```sh
-export CAPLV_VERSION=0.1.0
+export CAPLV_VERSION=0.1.1
 
 # Generate manifests
 make manifests generate
 
-# Build push image locally
+# Build image locally
 docker build \
   -t ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION \
   .

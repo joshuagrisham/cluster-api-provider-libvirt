@@ -8,7 +8,7 @@ spec:
     services:
       cidrBlocks: ${SERVICE_CIDR:=["10.128.0.0/12"]}
     pods:
-      cidrBlocks: ${POD_CIDR:=["192.168.0.0/16"]}
+      cidrBlocks: ${POD_CIDR:=["10.42.0.0/16"]}
     serviceDomain: ${SERVICE_DOMAIN:="cluster.local"}
   controlPlaneEndpoint:
     host: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_HOST}
