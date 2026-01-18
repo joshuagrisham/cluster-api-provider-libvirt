@@ -18,9 +18,9 @@ docker build --push \
   -t ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION \
   .
 
-# Tag and push latest
-docker tag ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION ghcr.io/joshuagrisham/cluster-api-provider-libvirt:latest
-docker push ghcr.io/joshuagrisham/cluster-api-provider-libvirt:latest
+# Tag and push as v0.1
+docker tag ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION ghcr.io/joshuagrisham/cluster-api-provider-libvirt:v0.1
+docker push ghcr.io/joshuagrisham/cluster-api-provider-libvirt:v0.1
 
 # Create infrastructure-components.yaml
 kustomize build config/default > infrastructure-components.yaml
