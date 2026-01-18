@@ -3,7 +3,7 @@
 Currently the release process is manual. A workflow could be set up in the future. The steps below are documented just to help facilitate the manual process.
 
 ```sh
-export CAPLV_VERSION=0.1.1
+export CAPLV_VERSION=0.2.0
 
 # Generate manifests
 make manifests generate
@@ -13,11 +13,9 @@ docker build \
   -t ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION \
   .
 
-# Build and push image with standard OCI annotations
+# Build and push image
 docker build --push \
   -t ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION \
-  --annotation "org.opencontainers.image.source=https://github.com/joshuagrisham/cluster-api-provider-libvirt" \
-  --annotation "org.opencontainers.image.description=Kubernetes Cluster API Provider for Libvirt (CAPLV)" \
   .
 
 # Tag and push latest

@@ -19,18 +19,33 @@ Yes, [there is one for OpenShift](https://github.com/openshift/cluster-api-provi
 
 There also appear to be [several other ones on GitHub](https://github.com/search?q=cluster-api-provider-libvirt&type=repositories), but they are either outdated, don't really work with CAPI, or are just an empty repository.
 
+## Version compatibility
+
+- CAPLV version `0.1.x` is **_ONLY_** compatible with CAPI `1.10.x` and API version `v1beta1`
+- CAPLV version `0.2.x` is **_ONLY_** compatible with CAPI `1.12.x` and API version `v1beta2`
+
+The reason it is like this is so that CAPLV `0.1.x` can be used out-of-the-box with Rancher 2.13.x and Rancher Turtles (otherwise it throws errors that it does not support `v1beta2`).
+
 ## Getting started
 
 CAPLV will create KVM-based virtual machines using the Libvirt daemon specified in the `LIBVIRT_URI` environment variable at the time of installing the provider. These virtual machines will then be bootstrapped using [cloud-init](https://cloud-init.io/) and serve as your newly-created Kubernetes cluster's control plane and worker nodes.
 
-Add the `libvirt` infrastructure provider to your `clusterctl.yaml`:
+Add the `libvirt` infrastructure provider to your `clusterctl.yaml`, setting the CAPLV version based on which version of CAPI you intend to use:
 
 ```yaml
 # ~/.config/cluster-api/clusterctl.yaml
 providers:
   - name: "libvirt"
-    url: "https://github.com/joshuagrisham/cluster-api-provider-libvirt/releases/latest/infrastructure-components.yaml"
+    url: "https://github.com/joshuagrisham/cluster-api-provider-libvirt/releases/v0.1.0/infrastructure-components.yaml"
     type: InfrastructureProvider
+```
+
+Note that you must also only use the version of `clusterctl` that is compatible with that version of CAPI. You can download a separate version of `clusterctl` if you like; here is an example:
+
+```sh
+wget -O bin/clusterctl-v1.10.10 https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.10.10/clusterctl-linux-amd64
+chmod +x bin/clusterctl-v1.10.10
+./bin/clusterctl-v1.10.10 version
 ```
 
 ## Installation instructions
@@ -121,7 +136,10 @@ make build-qemu-ubuntu-2204
 Once complete, you will have a new `qcow2` (raw) -formatted image created under `./output/` which you can then copy to the path of your Libvirt storage pool (e.g. under `/k8s/` if using the example from above).
 
 ```sh
-cp output/ubuntu-2204-kube-v1.34.2/ubuntu-2204-kube-v1.34.2 /k8s/
+# Copy but add the qcow2 extension
+cp output/ubuntu-2204-kube-v1.34.2/ubuntu-2204-kube-v1.34.2 /k8s/ubuntu-2204-kube-v1.34.2.qcow2
+# Open permissions to help prevent various issues
+sudo chmod 777 /k8s/ubuntu-2204-kube-v1.34.2.qcow2
 ```
 
 When using this example, you would set the `LibvirtMachine[Template]`'s `spec.backingImagePath` to `/k8s/ubuntu-2204-kube-v1.34.2`.
@@ -159,8 +177,10 @@ First, you will need to install the Cluster API components and the `libvirt` inf
 ```sh
 # Set the LIBVIRT_URI that CAPLV should use
 export LIBVIRT_URI=qemu+tcp://192.168.128.1/system
+# Enable the Cluster Topology feature flag
+export CLUSTER_TOPOLOGY=true
 # Install the Cluster API and providers:
-CLUSTER_TOPOLOGY=true clusterctl init --infrastructure libvirt --bootstrap kubeadm --control-plane kubeadm
+clusterctl init --infrastructure libvirt --bootstrap kubeadm --control-plane kubeadm
 ```
 
 > [!NOTE]
@@ -173,7 +193,7 @@ With our example `k8s` Libvirt network, we can use an address such as `192.168.1
 ```sh
 export LIBVIRT_MACHINE_NETWORK=k8s
 export LIBVIRT_MACHINE_STORAGE_POOL=k8s
-export LIBVIRT_MACHINE_BACKING_IMAGE=/k8s/ubuntu-2204-kube-v1.34.2
+export LIBVIRT_MACHINE_BACKING_IMAGE=/k8s/ubuntu-2204-kube-v1.34.2.qcow2
 export LIBVIRT_CONTROL_PLANE_ENDPOINT_HOST=192.168.128.10
 export LIBVIRT_SSH_PUBLIC_KEY="ssh-rsa AAAAB3Nza..." # Set to the value of a public key that you wish to be able to log in with using the LIBVIRT_SSH_USER
 
