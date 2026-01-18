@@ -8,5 +8,5 @@ spec:
     spec:
       containers:
       - name: manager
-        image: ghcr.io/joshuagrisham/cluster-api-provider-libvirt:v0.1
+        image: ghcr.io/joshuagrisham/cluster-api-provider-libvirt:0.1
         imagePullPolicy: Always
