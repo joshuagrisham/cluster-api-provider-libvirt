@@ -1,96 +1,74 @@
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
   name: libvirt-rke2
 spec:
   infrastructure:
-    templateRef:
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       kind: LibvirtClusterTemplate
       name: libvirt-rke2
   controlPlane:
-    templateRef:
+    ref:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: RKE2ControlPlaneTemplate
       name: libvirt-rke2
     machineInfrastructure:
-      templateRef:
+      ref:
         kind: LibvirtMachineTemplate
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         name: libvirt-rke2-control-plane
-    healthCheck:
-      checks:
-        unhealthyNodeConditions:
-        - type: Ready
-          status: Unknown
-          timeoutSeconds: 300
-        - type: Ready
-          status: "False"
-          timeoutSeconds: 300
-        unhealthyMachineConditions:
-        - type: "NodeReady"
-          status: Unknown
-          timeoutSeconds: 300
-        - type: "NodeReady"
-          status: "False"
-          timeoutSeconds: 300
+    machineHealthCheck:
+      unhealthyConditions:
+      - type: Ready
+        status: Unknown
+        timeout: 300s
+      - type: Ready
+        status: "False"
+        timeout: 300s
   workers:
     machineDeployments:
     - class: worker-small
-      bootstrap:
-        templateRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-          kind: RKE2ConfigTemplate
-          name: libvirt-rke2-worker
-      infrastructure:
-        templateRef:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-          kind: LibvirtMachineTemplate
-          name: libvirt-rke2-worker-small
-      healthCheck:
-        checks:
-          unhealthyNodeConditions:
-          - type: Ready
-            status: Unknown
-            timeoutSeconds: 300
-          - type: Ready
-            status: "False"
-            timeoutSeconds: 300
-          unhealthyMachineConditions:
-          - type: "NodeReady"
-            status: Unknown
-            timeoutSeconds: 300
-          - type: "NodeReady"
-            status: "False"
-            timeoutSeconds: 300
+      template:
+        bootstrap:
+          ref:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: RKE2ConfigTemplate
+            name: libvirt-rke2-worker
+        infrastructure:
+          ref:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: LibvirtMachineTemplate
+            name: libvirt-rke2-worker-small
+      machineHealthCheck:
+        unhealthyConditions:
+        - type: Ready
+          status: Unknown
+          timeout: 300s
+        - type: Ready
+          status: "False"
+          timeout: 300s
     - class: worker-medium
-      bootstrap:
-        templateRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-          kind: RKE2ConfigTemplate
-          name: libvirt-rke2-worker
-      infrastructure:
-        templateRef:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-          kind: LibvirtMachineTemplate
-          name: libvirt-rke2-worker-medium
-      healthCheck:
-        checks:
-          unhealthyNodeConditions:
-          - type: Ready
-            status: Unknown
-            timeoutSeconds: 300
-          - type: Ready
-            status: "False"
-            timeoutSeconds: 300
-          unhealthyMachineConditions:
-          - type: "NodeReady"
-            status: Unknown
-            timeoutSeconds: 300
-          - type: "NodeReady"
-            status: "False"
-            timeoutSeconds: 300
+      template:
+        bootstrap:
+          ref:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: RKE2ConfigTemplate
+            name: libvirt-rke2-worker
+        infrastructure:
+          ref:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: LibvirtMachineTemplate
+            name: libvirt-rke2-worker-medium
+      machineHealthCheck:
+        unhealthyConditions:
+        - type: Ready
+          status: Unknown
+          timeout: 300s
+        - type: Ready
+          status: "False"
+          timeout: 300s
   variables:
   - name: network
     required: true
@@ -146,7 +124,7 @@ spec:
   - name: LibvirtMachineTemplateGeneral
     definitions:
     - selector:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: LibvirtMachineTemplate
         # Match all LibvirtMachineTemplates (control plane and all worker classes)
         matchResources:
@@ -296,13 +274,16 @@ spec:
                   shell: /bin/bash
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtClusterTemplate
 metadata:
   name: libvirt-rke2
+spec:
+  template:
+    spec: {}
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtMachineTemplate
 metadata:
   name: libvirt-rke2-control-plane
@@ -317,7 +298,7 @@ spec:
       backingImagePath: ""
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtMachineTemplate
 metadata:
   name: libvirt-rke2-worker-small
@@ -332,7 +313,7 @@ spec:
       backingImagePath: ""
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtMachineTemplate
 metadata:
   name: libvirt-rke2-worker-medium

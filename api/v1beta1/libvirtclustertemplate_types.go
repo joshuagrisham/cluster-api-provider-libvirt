@@ -18,7 +18,7 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // LibvirtClusterTemplateSpec defines the desired state of LibvirtClusterTemplate.
@@ -28,6 +28,7 @@ type LibvirtClusterTemplateSpec struct {
 
 // +kubebuilder:resource:path=libvirtclustertemplates,scope=Namespaced,categories=cluster-api
 // +kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // LibvirtClusterTemplate is the Schema for the libvirtclustertemplates API.
 type LibvirtClusterTemplate struct {
@@ -56,4 +57,8 @@ type LibvirtClusterTemplateResource struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	ObjectMeta clusterv1.ObjectMeta `json:"metadata,omitempty,omitzero"`
+
+	// Spec is the specification of the desired behavior of the cluster.
+	// +optional
+	Spec LibvirtClusterSpec `json:"spec,omitempty"`
 }

@@ -13,5 +13,4 @@ patches: []
 labels:
 - includeSelectors: true
   pairs:
-    cluster.x-k8s.io/v1beta1: v1beta1 # RKE2 requires that resources have v1beta1 (v0.21.1 releaed Nov 4, 2025)
-    cluster.x-k8s.io/v1beta2: v1beta2
+    cluster.x-k8s.io/v1beta1: v1beta1

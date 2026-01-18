@@ -19,7 +19,7 @@ package v1beta1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 const (
@@ -94,7 +94,14 @@ type LibvirtMachineStatus struct {
 	// +optional
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
-	// initialization provides observations of the LibvirtMachine initialization process.
+	// ready (v1beta1) denotes that the LibvirtMachine infrastructure is fully provisioned.
+	// NOTE: this field is part of the Cluster API contract and it is used to orchestrate provisioning.
+	// The value of this field is never updated after provisioning is completed. Please use conditions
+	// to check the operational state of the infra machine.
+	// +optional
+	Ready bool `json:"ready"`
+
+	// initialization (v1beta2) provides observations of the LibvirtMachine initialization process.
 	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
 	// +optional
 	Initialization LibvirtMachineInitializationStatus `json:"initialization,omitempty,omitzero"`
@@ -103,6 +110,7 @@ type LibvirtMachineStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=libvirtmachines,scope=Namespaced,categories=cluster-api
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels['cluster\\.x-k8s\\.io/cluster-name']",description="Cluster"
 // +kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="Provider ID"
 

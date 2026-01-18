@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // LibvirtMachineTemplateResource describes the data needed to create a LibvirtMachine from a template.
@@ -93,6 +93,7 @@ type LibvirtMachineTemplateStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=libvirtmachinetemplates,scope=Namespaced,categories=cluster-api
+// +kubebuilder:storageversion
 
 // LibvirtMachineTemplate is the Schema for the libvirtmachinetemplates API.
 type LibvirtMachineTemplate struct {

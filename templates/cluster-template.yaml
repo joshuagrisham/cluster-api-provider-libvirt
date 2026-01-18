@@ -1,5 +1,5 @@
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: ${CLUSTER_NAME}
@@ -15,23 +15,23 @@ spec:
     host: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_HOST}
     port: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_PORT:=6443}
   controlPlaneRef:
-    apiGroup: controlplane.cluster.x-k8s.io
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
     kind: KubeadmControlPlane
     name: ${CLUSTER_NAME}
   infrastructureRef:
-    apiGroup: infrastructure.cluster.x-k8s.io
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: LibvirtCluster
     name: ${CLUSTER_NAME}
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtCluster
 metadata:
   name: ${CLUSTER_NAME}
   namespace: ${NAMESPACE}
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtMachineTemplate
 metadata:
   name: ${CLUSTER_NAME}-control-plane
@@ -47,7 +47,7 @@ spec:
       backingImagePath: ${LIBVIRT_MACHINE_BACKING_IMAGE}
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtMachineTemplate
 metadata:
   name: ${CLUSTER_NAME}-worker
@@ -63,18 +63,17 @@ spec:
       backingImagePath: ${LIBVIRT_MACHINE_BACKING_IMAGE}
 
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlane
 metadata:
   name: ${CLUSTER_NAME}
   namespace: ${NAMESPACE}
 spec:
   machineTemplate:
-    spec:
-      infrastructureRef:
-        apiGroup: infrastructure.cluster.x-k8s.io
-        kind: LibvirtMachineTemplate
-        name: ${CLUSTER_NAME}-control-plane
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: LibvirtMachineTemplate
+      name: ${CLUSTER_NAME}-control-plane
   replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
   version: "${KUBERNETES_VERSION}"
   kubeadmConfigSpec:
@@ -92,16 +91,14 @@ spec:
         - "localhost"
     initConfiguration:
       nodeRegistration:
-        kubeletExtraArgs:
-        - name: provider-id
-          value: libvirt:///{{ local_hostname }}
         name: '{{ local_hostname }}'
+        kubeletExtraArgs:
+          provider-id: libvirt:///{{ local_hostname }}
     joinConfiguration:
       nodeRegistration:
-        kubeletExtraArgs:
-        - name: provider-id
-          value: libvirt:///{{ local_hostname }}
         name: '{{ local_hostname }}'
+        kubeletExtraArgs:
+          provider-id: libvirt:///{{ local_hostname }}
     files:
     - content: |
         apiVersion: v1
@@ -231,7 +228,7 @@ spec:
     - KUBECONFIG=/etc/kubernetes/super-admin.conf kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
   name: ${CLUSTER_NAME}-worker
@@ -251,16 +248,16 @@ spec:
       clusterName: ${CLUSTER_NAME}
       bootstrap:
         configRef:
-          apiGroup: bootstrap.cluster.x-k8s.io
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
           name: ${CLUSTER_NAME}-worker
       infrastructureRef:
-        apiGroup: infrastructure.cluster.x-k8s.io
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: LibvirtMachineTemplate
         name: ${CLUSTER_NAME}-worker
 
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
   name: ${CLUSTER_NAME}-worker
@@ -279,7 +276,5 @@ spec:
         nodeRegistration:
           name: '{{ local_hostname }}'
           kubeletExtraArgs:
-          - name: provider-id
-            value: libvirt:///{{ local_hostname }}
-          - name: "eviction-hard"
-            value: "nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%"
+            provider-id: libvirt:///{{ local_hostname }}
+            eviction-hard: "nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%"

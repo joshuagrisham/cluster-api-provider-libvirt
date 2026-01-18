@@ -6,7 +6,7 @@
     </nat>
   </forward>
   <bridge name='virbr1' stp='on' delay='0'/> <!-- NOTE: Update this if virbr1 is already in use -->
-  <domain name='k8s.local'/>
+  <domain name='k8s.local' localOnly='yes'/>
   <dns enable='yes' />
   <ip family='ipv4' address='192.168.128.1' prefix='24'>
     <dhcp>

@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	infrav1 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta2"
+	infrav1 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta1"
 )
 
 var _ = Describe("LibvirtCluster Controller", func() {

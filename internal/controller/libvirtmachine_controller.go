@@ -29,7 +29,7 @@ import (
 
 	"k8s.io/klog/v2"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	clog "sigs.k8s.io/cluster-api/util/log"
@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	infrav1 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta2"
+	infrav1 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta1"
 	"github.com/joshuagrisham/cluster-api-provider-libvirt/internal/libvirtclient"
 )
 
@@ -168,13 +168,13 @@ func (r *LibvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// Do nothing if the Cluster's infrastructureRef is not defined
-	if !cluster.Spec.InfrastructureRef.IsDefined() {
+	if cluster.Spec.InfrastructureRef == nil {
 		log.Info(fmt.Sprintf("Cluster %s/%s infrastructureRef is not available yet", cluster.Namespace, cluster.Name))
 		return reconcile.Result{}, nil
 	}
 
 	// Do nothing if the Cluster is not yet marked as provisioned
-	if cluster.Status.Initialization.InfrastructureProvisioned == nil || *cluster.Status.Initialization.InfrastructureProvisioned != true {
+	if cluster.Status.InfrastructureReady != true {
 		log.Info(fmt.Sprintf("Cluster %s/%s is not provisioned yet", cluster.Namespace, cluster.Name))
 		return reconcile.Result{}, nil
 	}
@@ -246,7 +246,8 @@ func (r *LibvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	log.Info(fmt.Sprintf("got IP addresses for virtual machine '%s': %v", externalMachine.Name, addresses))
 
 	// Mark the LibvirtMachine as "provisioned"
-	libvirtMachine.Status.Initialization.Provisioned = true
+	libvirtMachine.Status.Ready = true                      // v1beta1
+	libvirtMachine.Status.Initialization.Provisioned = true // v1beta2
 	log.Info(fmt.Sprintf("LibvirtMachine %s/%s is provisioned", libvirtMachine.Namespace, libvirtMachine.Name))
 
 	// TODO: Per the Cluster API contract, we SHOULD also set Conditions here as well.

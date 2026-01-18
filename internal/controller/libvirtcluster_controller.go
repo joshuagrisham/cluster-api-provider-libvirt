@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	infrav1 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta2"
+	infrav1 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta1"
 )
 
 // LibvirtClusterReconciler reconciles a LibvirtCluster object
@@ -125,7 +125,8 @@ func (r *LibvirtClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// - Validate storage pool exists (or create if not?)
 	// - Set up some kind of load balancer VM e.g. HAProxy (if we want to provision a separate load balancer VM for the control plane endpoint?)
 
-	libvirtCluster.Status.Initialization.Provisioned = true
+	libvirtCluster.Status.Ready = true                      // v1beta1
+	libvirtCluster.Status.Initialization.Provisioned = true // v1beta2
 	log.Info(fmt.Sprintf("LibvirtCluster %s/%s is provisioned", libvirtCluster.Namespace, libvirtCluster.Name))
 
 	// TODO: Per the Cluster API contract, we SHOULD also set Conditions here as well.

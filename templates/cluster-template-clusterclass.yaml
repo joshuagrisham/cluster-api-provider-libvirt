@@ -1,4 +1,4 @@
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: ${CLUSTER_NAME}
@@ -14,8 +14,7 @@ spec:
     host: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_HOST}
     port: ${LIBVIRT_CONTROL_PLANE_ENDPOINT_PORT:=6443}
   topology:
-    classRef:
-      name: libvirt-kubeadm
+    class: libvirt-kubeadm
     version: ${KUBERNETES_VERSION}
     controlPlane:
       replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}

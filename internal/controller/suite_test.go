@@ -32,8 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	infrastructurev1beta2 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta2"
-	infrav1 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta2"
+	infrav1 "github.com/joshuagrisham/cluster-api-provider-libvirt/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -61,9 +60,6 @@ var _ = BeforeSuite(func() {
 
 	var err error
 	err = infrav1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = infrastructurev1beta2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

@@ -1,96 +1,74 @@
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
   name: libvirt-kubeadm
 spec:
   infrastructure:
-    templateRef:
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       kind: LibvirtClusterTemplate
       name: libvirt-kubeadm
   controlPlane:
-    templateRef:
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: KubeadmControlPlaneTemplate
       name: libvirt-kubeadm
     machineInfrastructure:
-      templateRef:
+      ref:
         kind: LibvirtMachineTemplate
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         name: libvirt-kubeadm-control-plane
-    healthCheck:
-      checks:
-        unhealthyNodeConditions:
-        - type: Ready
-          status: Unknown
-          timeoutSeconds: 300
-        - type: Ready
-          status: "False"
-          timeoutSeconds: 300
-        unhealthyMachineConditions:
-        - type: "NodeReady"
-          status: Unknown
-          timeoutSeconds: 300
-        - type: "NodeReady"
-          status: "False"
-          timeoutSeconds: 300
+    machineHealthCheck:
+      unhealthyConditions:
+      - type: Ready
+        status: Unknown
+        timeout: 300s
+      - type: Ready
+        status: "False"
+        timeout: 300s
   workers:
     machineDeployments:
     - class: worker-small
-      bootstrap:
-        templateRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
-          kind: KubeadmConfigTemplate
-          name: libvirt-kubeadm-worker
-      infrastructure:
-        templateRef:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-          kind: LibvirtMachineTemplate
-          name: libvirt-kubeadm-worker-small
-      healthCheck:
-        checks:
-          unhealthyNodeConditions:
-          - type: Ready
-            status: Unknown
-            timeoutSeconds: 300
-          - type: Ready
-            status: "False"
-            timeoutSeconds: 300
-          unhealthyMachineConditions:
-          - type: "NodeReady"
-            status: Unknown
-            timeoutSeconds: 300
-          - type: "NodeReady"
-            status: "False"
-            timeoutSeconds: 300
+      template:
+        bootstrap:
+          ref:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            name: libvirt-kubeadm-worker
+        infrastructure:
+          ref:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: LibvirtMachineTemplate
+            name: libvirt-kubeadm-worker-small
+      machineHealthCheck:
+        unhealthyConditions:
+        - type: Ready
+          status: Unknown
+          timeout: 300s
+        - type: Ready
+          status: "False"
+          timeout: 300s
     - class: worker-medium
-      bootstrap:
-        templateRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
-          kind: KubeadmConfigTemplate
-          name: libvirt-kubeadm-worker
-      infrastructure:
-        templateRef:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-          kind: LibvirtMachineTemplate
-          name: libvirt-kubeadm-worker-medium
-      healthCheck:
-        checks:
-          unhealthyNodeConditions:
-          - type: Ready
-            status: Unknown
-            timeoutSeconds: 300
-          - type: Ready
-            status: "False"
-            timeoutSeconds: 300
-          unhealthyMachineConditions:
-          - type: "NodeReady"
-            status: Unknown
-            timeoutSeconds: 300
-          - type: "NodeReady"
-            status: "False"
-            timeoutSeconds: 300
+      template:
+        bootstrap:
+          ref:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            name: libvirt-kubeadm-worker
+        infrastructure:
+          ref:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: LibvirtMachineTemplate
+            name: libvirt-kubeadm-worker-medium
+      machineHealthCheck:
+        unhealthyConditions:
+        - type: Ready
+          status: Unknown
+          timeout: 300s
+        - type: Ready
+          status: "False"
+          timeout: 300s
   variables:
   - name: network
     required: true
@@ -146,7 +124,7 @@ spec:
   - name: LibvirtMachineTemplateGeneral
     definitions:
     - selector:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: LibvirtMachineTemplate
         # Match all LibvirtMachineTemplates (control plane and all worker classes)
         matchResources:
@@ -174,7 +152,7 @@ spec:
   - name: KubeadmControlPlaneTemplateGeneral
     definitions:
     - selector:
-        apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+        apiVersion: controlplane.cluster.x-k8s.io/v1beta1
         kind: KubeadmControlPlaneTemplate
         matchResources:
           controlPlane: true
@@ -273,7 +251,7 @@ spec:
   - name: KubeadmConfigTemplateGeneral
     definitions:
     - selector:
-        apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+        apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
         kind: KubeadmConfigTemplate
         matchResources:
           machineDeploymentClass:
@@ -291,13 +269,16 @@ spec:
               shell: /bin/bash
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtClusterTemplate
 metadata:
   name: libvirt-kubeadm
+spec:
+  template:
+    spec: {}
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtMachineTemplate
 metadata:
   name: libvirt-kubeadm-control-plane
@@ -312,7 +293,7 @@ spec:
       backingImagePath: ""
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtMachineTemplate
 metadata:
   name: libvirt-kubeadm-worker-small
@@ -327,7 +308,7 @@ spec:
       backingImagePath: ""
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: LibvirtMachineTemplate
 metadata:
   name: libvirt-kubeadm-worker-medium
@@ -342,7 +323,7 @@ spec:
       backingImagePath: ""
 
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlaneTemplate
 metadata:
   name: libvirt-kubeadm
@@ -358,16 +339,14 @@ spec:
             - "localhost"
         initConfiguration:
           nodeRegistration:
-            kubeletExtraArgs:
-            - name: provider-id
-              value: libvirt:///{{ local_hostname }}
             name: '{{ local_hostname }}'
+            kubeletExtraArgs:
+              provider-id: libvirt:///{{ local_hostname }}
         joinConfiguration:
           nodeRegistration:
-            kubeletExtraArgs:
-            - name: provider-id
-              value: libvirt:///{{ local_hostname }}
             name: '{{ local_hostname }}'
+            kubeletExtraArgs:
+              provider-id: libvirt:///{{ local_hostname }}
         files:
 
         - content: 127.0.0.1 localhost kubernetes
@@ -421,7 +400,7 @@ spec:
         - KUBECONFIG=/etc/kubernetes/super-admin.conf kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
   name: libvirt-kubeadm-worker
@@ -432,7 +411,5 @@ spec:
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
-          - name: provider-id
-            value: libvirt:///{{ local_hostname }}
-          - name: "eviction-hard"
-            value: "nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%"
+            provider-id: libvirt:///{{ local_hostname }}
+            eviction-hard: "nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%"
