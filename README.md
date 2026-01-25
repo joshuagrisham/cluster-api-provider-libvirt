@@ -36,7 +36,7 @@ Add the `libvirt` infrastructure provider to your `clusterctl.yaml`, setting the
 # ~/.config/cluster-api/clusterctl.yaml
 providers:
   - name: "libvirt"
-    url: "https://github.com/joshuagrisham/cluster-api-provider-libvirt/releases/v0.1.0/infrastructure-components.yaml"
+    url: "https://github.com/joshuagrisham/cluster-api-provider-libvirt/releases/latest/infrastructure-components.yaml"
     type: InfrastructureProvider
 ```
 
