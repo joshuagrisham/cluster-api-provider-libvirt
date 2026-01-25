@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -82,13 +83,6 @@ func (r *LibvirtClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
-	// Handle deleted instances
-	if !libvirtCluster.DeletionTimestamp.IsZero() {
-		log.Info(fmt.Sprintf("deleting LibvirtCluster %s/%s", libvirtCluster.Namespace, libvirtCluster.Name))
-		controllerutil.RemoveFinalizer(libvirtCluster, infrav1.MachineFinalizer)
-		return reconcile.Result{}, nil
-	}
-
 	// If the LibvirtCluster doesn't have our finalizer, add it
 	controllerutil.AddFinalizer(libvirtCluster, infrav1.MachineFinalizer)
 
@@ -115,7 +109,14 @@ func (r *LibvirtClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Do nothing if the Cluster or LibvirtCluster is paused
 	if annotations.IsPaused(cluster, libvirtCluster) {
 		log.Info(fmt.Sprintf("LibvirtCluster %s/%s or linked Cluster %s/%s is marked as paused. Won't reconcile.", libvirtCluster.Namespace, libvirtCluster.Name, cluster.Namespace, cluster.Name))
-		return ctrl.Result{}, nil
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	// Handle deleted instances
+	if !libvirtCluster.DeletionTimestamp.IsZero() {
+		log.Info(fmt.Sprintf("deleting LibvirtCluster %s/%s", libvirtCluster.Namespace, libvirtCluster.Name))
+		controllerutil.RemoveFinalizer(libvirtCluster, infrav1.MachineFinalizer)
+		return reconcile.Result{}, nil
 	}
 
 	// Mark the LibvirtCluster as "provisioned"

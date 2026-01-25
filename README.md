@@ -92,14 +92,19 @@ Create and start a Libvirt storage pool (this one we will call `k8s` at the path
 
 ```sh
 sudo mkdir /k8s
-sudo chmod 777 /k8s
-virsh pool-create-as --name k8s --type dir --target /k8s
+sudo chown root:libvirt-qemu /k8s
+sudo chmod 770 /k8s
+virsh pool-define-as --name k8s --type dir --target /k8s
+virsh pool-start k8s
+virsh pool-autostart k8s
 ```
 
 Create a Libvirt network (using the example file [examples/k8s-libvirt-network.xml](./examples/k8s-libvirt-network.xml)):
 
 ```sh
-virsh net-create examples/k8s-libvirt-network.xml
+virsh net-define k8s-libvirt-network.xml
+virsh net-start k8s
+virsh net-autostart k8s
 ```
 
 This example network has a gateway IP of `192.168.128.1` and will provide DHCP for your VMs in the range `192.168.128.100-192.168.128.254`. The range `192.168.128.2-192.168.128.99` is reserved for static IP assignments, such as for using with `kube-vip` to provide stable control plane endpoints for your clusters (more on this below).
