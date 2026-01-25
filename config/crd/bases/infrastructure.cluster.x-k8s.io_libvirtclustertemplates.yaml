@@ -71,6 +71,15 @@ spec:
                           More info: http://kubernetes.io/docs/user-guide/labels
                         type: object
                     type: object
+                  spec:
+                    description: Spec is the specification of the desired behavior
+                      of the cluster.
+                    properties:
+                      foo:
+                        description: foo is unused but something is required to exist
+                          when creating LibvirtClusterTemplates in v1beta1.
+                        type: boolean
+                    type: object
                 type: object
             required:
             - template
@@ -132,6 +141,15 @@ spec:
                           and services.
                           More info: http://kubernetes.io/docs/user-guide/labels
                         type: object
+                    type: object
+                  spec:
+                    description: Spec is the specification of the desired behavior
+                      of the cluster.
+                    properties:
+                      foo:
+                        description: foo is unused but something is required to exist
+                          when creating LibvirtClusterTemplates in v1beta1.
+                        type: boolean
                     type: object
                 type: object
             required:

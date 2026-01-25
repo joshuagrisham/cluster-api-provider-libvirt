@@ -104,7 +104,7 @@ spec:
                       network:
                         description: |-
                           Network is the name of the network to which the LibvirtMachine will be connected. Uses the 'default' network if not specified.
-                          Assumes that the network already exists and has DHCP enabled.
+                          Assumes that the network already exists and has DHCP enabled. TODO: Support static IPs and specify hostname per LibvirtMachine?
                         type: string
                       providerID:
                         description: |-

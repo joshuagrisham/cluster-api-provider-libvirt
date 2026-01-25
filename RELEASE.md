@@ -18,6 +18,10 @@ docker build --push \
   -t ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION \
   .
 
+# Tag and push as 0.2
+docker tag ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION ghcr.io/joshuagrisham/cluster-api-provider-libvirt:0.2
+docker push ghcr.io/joshuagrisham/cluster-api-provider-libvirt:0.2
+
 # Tag and push latest
 docker tag ghcr.io/joshuagrisham/cluster-api-provider-libvirt:$CAPLV_VERSION ghcr.io/joshuagrisham/cluster-api-provider-libvirt:latest
 docker push ghcr.io/joshuagrisham/cluster-api-provider-libvirt:latest

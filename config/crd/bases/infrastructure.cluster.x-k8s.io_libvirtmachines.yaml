@@ -77,7 +77,7 @@ spec:
               network:
                 description: |-
                   Network is the name of the network to which the LibvirtMachine will be connected. Uses the 'default' network if not specified.
-                  Assumes that the network already exists and has DHCP enabled.
+                  Assumes that the network already exists and has DHCP enabled. TODO: Support static IPs and specify hostname per LibvirtMachine?
                 type: string
               providerID:
                 description: |-
@@ -198,7 +198,7 @@ spec:
                 x-kubernetes-list-type: map
               initialization:
                 description: |-
-                  initialization provides observations of the LibvirtMachine initialization process.
+                  initialization (v1beta2) provides observations of the LibvirtMachine initialization process.
                   NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
                 minProperties: 1
                 properties:
@@ -208,6 +208,13 @@ spec:
                       NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Machine provisioning.
                     type: boolean
                 type: object
+              ready:
+                description: |-
+                  ready (v1beta1) denotes that the LibvirtMachine infrastructure is fully provisioned.
+                  NOTE: this field is part of the Cluster API contract and it is used to orchestrate provisioning.
+                  The value of this field is never updated after provisioning is completed. Please use conditions
+                  to check the operational state of the infra machine.
+                type: boolean
             type: object
         required:
         - spec
@@ -398,7 +405,7 @@ spec:
                 x-kubernetes-list-type: map
               initialization:
                 description: |-
-                  initialization provides observations of the LibvirtMachine initialization process.
+                  initialization (v1beta2) provides observations of the LibvirtMachine initialization process.
                   NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
                 minProperties: 1
                 properties:
@@ -408,6 +415,13 @@ spec:
                       NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Machine provisioning.
                     type: boolean
                 type: object
+              ready:
+                description: |-
+                  ready (v1beta1) denotes that the LibvirtMachine infrastructure is fully provisioned.
+                  NOTE: this field is part of the Cluster API contract and it is used to orchestrate provisioning.
+                  The value of this field is never updated after provisioning is completed. Please use conditions
+                  to check the operational state of the infra machine.
+                type: boolean
             type: object
         required:
         - spec

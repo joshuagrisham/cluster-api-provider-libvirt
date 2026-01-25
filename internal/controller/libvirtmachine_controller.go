@@ -83,19 +83,6 @@ func (r *LibvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
-	// Handle deleted instances
-	if !libvirtMachine.DeletionTimestamp.IsZero() {
-		if externalMachine.Exists() {
-			log.Info(fmt.Sprintf("deleting virtual machine '%s'", externalMachine.Name))
-			if err := externalMachine.Destroy(); err != nil {
-				return reconcile.Result{RequeueAfter: 30 * time.Second}, errors.Wrap(err, "failed to destroy LibvirtMachine")
-			}
-		}
-		log.Info(fmt.Sprintf("deleting LibvirtMachine %s/%s", libvirtMachine.Namespace, libvirtMachine.Name))
-		controllerutil.RemoveFinalizer(libvirtMachine, infrav1.MachineFinalizer)
-		return reconcile.Result{}, nil
-	}
-
 	// If the LibvirtMachine doesn't have our finalizer, add it
 	controllerutil.AddFinalizer(libvirtMachine, infrav1.MachineFinalizer)
 
@@ -137,6 +124,10 @@ func (r *LibvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 	if err := r.Get(ctx, libvirtClusterName, libvirtCluster); err != nil {
+		// Handle deletion of orphaned LibvirtMachines in case the LibvirtCluster is already deleted
+		if !libvirtMachine.DeletionTimestamp.IsZero() {
+			return deleteExternalMachine(ctx, libvirtMachine, externalMachine)
+		}
 		log.Info("LibvirtCluster is not available yet")
 		return reconcile.Result{}, nil
 	}
@@ -148,7 +139,12 @@ func (r *LibvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Do nothing if the Cluster or LibvirtCluster is paused
 	if annotations.IsPaused(cluster, libvirtCluster) {
 		log.Info(fmt.Sprintf("LibvirtCluster %s/%s or linked Cluster %s/%s is marked as paused. Won't reconcile", libvirtCluster.Namespace, libvirtCluster.Name, cluster.Namespace, cluster.Name))
-		return reconcile.Result{}, nil
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	// Handle deleted instances
+	if !libvirtMachine.DeletionTimestamp.IsZero() {
+		return deleteExternalMachine(ctx, libvirtMachine, externalMachine)
 	}
 
 	// Do nothing if the Cluster's infrastructureRef is not defined
@@ -230,7 +226,8 @@ func (r *LibvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	log.Info(fmt.Sprintf("got IP addresses for virtual machine '%s': %v", externalMachine.Name, addresses))
 
 	// Mark the LibvirtMachine as "provisioned"
-	libvirtMachine.Status.Initialization.Provisioned = true
+	libvirtMachine.Status.Ready = true                      // v1beta1
+	libvirtMachine.Status.Initialization.Provisioned = true // v1beta2
 	log.Info(fmt.Sprintf("LibvirtMachine %s/%s is provisioned", libvirtMachine.Namespace, libvirtMachine.Name))
 
 	// TODO: Per the Cluster API contract, we SHOULD also set Conditions here as well.
@@ -245,6 +242,22 @@ func (r *LibvirtMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&infrav1.LibvirtMachine{}).
 		Named("libvirtmachine").
 		Complete(r)
+}
+
+// deleteExternalMachine handles deletion of the externalMachine and its associated resouces (volumes, etc)
+func deleteExternalMachine(ctx context.Context, libvirtMachine *infrav1.LibvirtMachine, externalMachine *libvirtclient.LibvirtClientMachine) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	if externalMachine.Exists() {
+		log.Info(fmt.Sprintf("deleting virtual machine '%s'", externalMachine.Name))
+		if err := externalMachine.Destroy(); err != nil {
+			return reconcile.Result{RequeueAfter: 30 * time.Second}, errors.Wrap(err, "failed to destroy LibvirtMachine")
+		}
+	}
+	log.Info(fmt.Sprintf("deleting LibvirtMachine %s/%s", libvirtMachine.Namespace, libvirtMachine.Name))
+	controllerutil.RemoveFinalizer(libvirtMachine, infrav1.MachineFinalizer)
+
+	return reconcile.Result{}, nil
 }
 
 // getBootstrapData retrieves and returns the bootstrap data from the specified secret
