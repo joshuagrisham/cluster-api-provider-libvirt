@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/pkg/errors"
@@ -216,23 +217,29 @@ func (r *LibvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Info(fmt.Sprintf("waiting for IP address to be assigned to virtual machine '%s'", externalMachine.Name))
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	libvirtMachine.Status.Addresses = nil
+	var machineAddresses []clusterv1.MachineAddress
 	for _, address := range addresses {
-		libvirtMachine.Status.Addresses = append(libvirtMachine.Status.Addresses, clusterv1.MachineAddress{
+		machineAddresses = append(machineAddresses, clusterv1.MachineAddress{
 			Type:    clusterv1.MachineExternalIP, // Assume that all addresses are external? (since the host should be bridged to the libvirt network and can access them)
 			Address: address,
 		})
 	}
-	log.Info(fmt.Sprintf("got IP addresses for virtual machine '%s': %v", externalMachine.Name, addresses))
+	if !slices.Equal(libvirtMachine.Status.Addresses, machineAddresses) {
+		log.Info(fmt.Sprintf("got IP addresses for virtual machine '%s': %v", externalMachine.Name, addresses))
+	}
+	libvirtMachine.Status.Addresses = machineAddresses
 
 	// Mark the LibvirtMachine as "provisioned"
+	if !libvirtMachine.Status.Initialization.Provisioned {
+		log.Info(fmt.Sprintf("LibvirtMachine %s/%s is provisioned", libvirtMachine.Namespace, libvirtMachine.Name))
+	}
 	libvirtMachine.Status.Ready = true                      // v1beta1
 	libvirtMachine.Status.Initialization.Provisioned = true // v1beta2
-	log.Info(fmt.Sprintf("LibvirtMachine %s/%s is provisioned", libvirtMachine.Namespace, libvirtMachine.Name))
 
 	// TODO: Per the Cluster API contract, we SHOULD also set Conditions here as well.
 
-	return reconcile.Result{}, nil
+	// Requeue to check every 5 minutes to handle drift just in case the VM goes down or gets modified
+	return reconcile.Result{RequeueAfter: 5 * time.Minute}, nil
 
 }
 
