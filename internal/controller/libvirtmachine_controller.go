@@ -166,6 +166,10 @@ func (r *LibvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if err := externalMachine.Destroy(); err != nil {
 			return reconcile.Result{}, errors.Wrapf(err, "failed to destroy out-of-sync virtual machine '%s'", externalMachine.Name)
 		}
+		libvirtMachine.Spec.ProviderID = ""
+		libvirtMachine.Status.Addresses = nil
+		libvirtMachine.Status.Ready = false                      // v1beta1
+		libvirtMachine.Status.Initialization.Provisioned = false // v1beta2
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
