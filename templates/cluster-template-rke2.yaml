@@ -63,12 +63,13 @@ spec:
       backingImagePath: ${LIBVIRT_MACHINE_BACKING_IMAGE}
 
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: RKE2ControlPlane
 metadata:
   name: ${CLUSTER_NAME}
   namespace: ${NAMESPACE}
 spec:
+  version: "${KUBERNETES_VERSION}"
   serverConfig:
     cni: ${LIBVIRT_RKE2_CNI:=canal} # canal, flannel, calico
     disableComponents:
@@ -76,18 +77,19 @@ spec:
         - cloudController
   replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
   machineTemplate:
-    infrastructureRef:
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-      kind: LibvirtMachineTemplate
-      name: ${CLUSTER_NAME}-control-plane
-    nodeDrainTimeout: 2m
-    nodeDeletionTimeout: 30s
-    nodeVolumeDetachTimeout: 5m
+    spec:
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: LibvirtMachineTemplate
+        name: ${CLUSTER_NAME}-control-plane
+      deletion:
+        nodeDrainTimeoutSeconds: 120
+        nodeDeletionTimeoutSeconds: 30
+        nodeVolumeDetachTimeoutSeconds: 300
   rolloutStrategy:
     type: "RollingUpdate"
     rollingUpdate:
       maxSurge: 1
-  version: "${KUBERNETES_VERSION}"
   agentConfig:
     kubelet:
       extraArgs:
@@ -265,7 +267,7 @@ spec:
         name: ${CLUSTER_NAME}-worker
 
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: RKE2ConfigTemplate
 metadata:
   name: ${CLUSTER_NAME}-worker

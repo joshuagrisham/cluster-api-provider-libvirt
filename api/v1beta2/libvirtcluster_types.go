@@ -4,13 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// LibvirtClusterSpec defines the desired state of LibvirtCluster.
-type LibvirtClusterSpec struct {
-	// foo is unused but something is required to exist when creating LibvirtClusterTemplates in v1beta1.
-	// +optional
-	Foo bool `json:"foo,omitempty"`
-}
-
 // LibvirtClusterStatus defines the observed state of LibvirtCluster.
 type LibvirtClusterStatus struct {
 	// conditions represent the current state of the LibvirtCluster resource.
@@ -65,10 +58,6 @@ type LibvirtCluster struct {
 	// status defines the observed state of LibvirtCluster
 	// +optional
 	Status LibvirtClusterStatus `json:"status,omitzero"`
-
-	// spec is unused but it required to exist when creating LibvirtClusterTemplates.
-	// +optional
-	Spec LibvirtClusterSpec `json:"spec,omitzero"`
 }
 
 // +kubebuilder:object:root=true

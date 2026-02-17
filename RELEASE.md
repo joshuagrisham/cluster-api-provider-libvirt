@@ -3,7 +3,7 @@
 Currently the release process is manual. A workflow could be set up in the future. The steps below are documented just to help facilitate the manual process.
 
 ```sh
-export CAPLV_VERSION=0.2.0
+export CAPLV_VERSION=0.2.2
 
 # Generate manifests
 make manifests generate

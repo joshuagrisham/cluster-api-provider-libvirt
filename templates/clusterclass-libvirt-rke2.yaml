@@ -11,7 +11,7 @@ spec:
       name: libvirt-rke2
   controlPlane:
     templateRef:
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: RKE2ControlPlaneTemplate
       name: libvirt-rke2
     machineInfrastructure:
@@ -40,7 +40,7 @@ spec:
     - class: worker-small
       bootstrap:
         templateRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
           kind: RKE2ConfigTemplate
           name: libvirt-rke2-worker
       infrastructure:
@@ -67,7 +67,7 @@ spec:
     - class: worker-medium
       bootstrap:
         templateRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
           kind: RKE2ConfigTemplate
           name: libvirt-rke2-worker
       infrastructure:
@@ -174,7 +174,7 @@ spec:
   - name: RKE2ControlPlaneTemplateGeneral
     definitions:
     - selector:
-        apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+        apiVersion: controlplane.cluster.x-k8s.io/v1beta2
         kind: RKE2ControlPlaneTemplate
         matchResources:
           controlPlane: true
@@ -276,7 +276,7 @@ spec:
   - name: RKE2ConfigTemplateGeneral
     definitions:
     - selector:
-        apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+        apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
         kind: RKE2ConfigTemplate
         matchResources:
           machineDeploymentClass:
@@ -347,7 +347,7 @@ spec:
       backingImagePath: ""
 
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: RKE2ControlPlaneTemplate
 metadata:
   name: libvirt-rke2
@@ -429,7 +429,7 @@ spec:
               namespace: kube-system
 
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: RKE2ConfigTemplate
 metadata:
   name: libvirt-rke2-worker
